@@ -1,0 +1,698 @@
+---
+title: "NPC1 Data Collation"
+author: "Adrian A. Castellanos"
+output: html_document
+date: "2026-03-19"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+First, we'll read in the variety of packages that will make organizing and joining the data from multiple sources easier. 
+```{r readinpackages}
+packages <- c("tidyverse", "magrittr", "sf", "terra", "readxl", "foreach", "treeio", "ape")
+sapply(packages, library, character.only = T)
+setwd("~/Desktop/Filovirus/")
+```
+
+Here, we read in the binding strength data from [Lasso et al. 2025](https://doi.org/10.1016/j.chom.2024.12.016), reduce it to the binding strength data for each filovirus, and make sure that we retain the original recorded name for posterity before modifying for matching with trait databases.
+```{r readindata}
+BAT <- read_xlsx("renpc1discussion/1_3_bats_obs_pred.xlsx", sheet = 2) %>%
+  janitor::clean_names()
+SPECS <- BAT %>%
+  dplyr::select(species, ebov_auc, bomv_auc, bdbv_auc, tafv_auc, restv_auc, sudv_auc, mlav_auc, llov_auc, marv_auc, ravn_auc) %>%
+  mutate(orig_species = species,
+         species = sapply(strsplit(.$species, " "), function(i) paste(i[1:2], collapse = " "))) %>%
+  data.frame()
+```
+
+We start by using the COMBINE database as a backbone as it is the source of much of our functional trait data. We one-hot encode many of the categorical traits to ensure proper use by our model. 
+```{r combinedata}
+COMB <- read.csv("~/Downloads/COMBINE_archives/trait_data_imputed.csv") %>%
+  mutate(binomial = paste(genus, species, sep = " "),
+         foraging_aerial = as.numeric(foraging_stratum == "A"),
+         foraging_arboreal = as.numeric(foraging_stratum == "Ar"),
+         foraging_ground = as.numeric(foraging_stratum == "G"),
+         foraging_marine = as.numeric(foraging_stratum == "M"),
+         foraging_scansorial = as.numeric(foraging_stratum == "S"),
+         island_mainland = as.numeric(island_endemicity == "Occurs on mainland"),
+         island_marine = as.numeric(island_endemicity == "Exclusively marine"),
+         island_landbridge = as.numeric(island_endemicity == "Occurs on large land bridge islands"),
+         island_endemic = as.numeric(island_endemicity == "Occurs only on isolated islands"),
+         bio_palearctic = as.numeric(!is.na(str_extract(biogeographical_realm, "Palearctic"))),
+         bio_afrotropical = as.numeric(!is.na(str_extract(biogeographical_realm, "Afrotropical"))),
+         bio_antarctic = as.numeric(!is.na(str_extract(biogeographical_realm, "Antarctic"))),
+         bio_australasian = as.numeric(!is.na(str_extract(biogeographical_realm, "Australasian"))),
+         bio_indomalayan = as.numeric(!is.na(str_extract(biogeographical_realm, "Indomalayan"))),
+         bio_nearctic = as.numeric(!is.na(str_extract(biogeographical_realm, "Nearctic"))),
+         bio_neotropical = as.numeric(!is.na(str_extract(biogeographical_realm, "Neotropical"))),
+         bio_oceanian = as.numeric(!is.na(str_extract(biogeographical_realm, "Oceanian"))))
+COMB %<>%
+  filter(order == "Chiroptera")
+```
+
+We then read in IUCN RedList Habitat Associations. After checking for missing species in the dataset compiled previously using the {rredlist} package, we match habitat associations with the COMBINE dataset. Here, I am using a CSV of this information already compiled, but the commented out section (using an IUCN Red List API key replacing the "#####" section) will allow you to create this. 
+```{r iucnhabitatassociations}
+IUCN <- read.csv("~/Desktop/Filovirus/IUCNRedListHabitatAssociations_Mammals_14Mar2024.csv")
+###Below lines are for adding additional species that may be missing. The most recent version above includes all species of interest in our dataset.
+#NAME <- COMB$binomial[which(is.na(match(COMB$iucn2020_binomial, IUCN$species)))]
+# EXT <- foreach(i = NAME, .combine = "rbind") %do% {
+#   res <- rredlist::rl_habitats(name = i, key = "##################################")
+#   genus <- strsplit(i, " ")[[1]][1]
+#   if(length(res$result) == 0) {
+#     brief <- NA
+#     suit <- NA
+#     marg <- NA
+#     unkn <- NA
+#   } else {
+#   suit <- res$result %>%
+#     filter(suitability == "Suitable")
+#   if(nrow(suit) == 0) {
+#     brief <- NA
+#     suit <- NA
+#   } else {
+#       brief <- paste(unique(sapply(strsplit(suit$code, "\\."), "[[", 1)), collapse = ",")
+#       suit <- paste(suit$code, collapse = ",")
+#   }
+#   marg <- res$result %>%
+#     filter(suitability == "Marginal")
+#   if(nrow(marg) == 0) {
+#     marg <- NA
+#   } else {
+#     marg <- paste(marg$code, collapse = ",")
+#   }
+#   unkn <- res$result %>%
+#     filter(suitability == "Unknown")
+#   if(nrow(unkn) == 0) {
+#     unkn <- NA
+#   } else {
+#     unkn <- paste(unkn$code, collapse = ",")
+#   }
+#   }
+#   order <- unique(COMB[COMB$genus == genus, "order"])
+#   family <- unique(COMB[COMB$genus == genus, "family"])
+#   cbind.data.frame(species = i,
+#                    order = order,
+#                    family = family,
+#                    fullCodeSuitable = suit,
+#                    fullCodeMarginal = marg,
+#                    fullCodeUnknown = unkn,
+#                    briefCode = brief)
+# }
+# IUCN <- rbind(IUCN, EXT)
+COMB %<>%
+  mutate(iucn_forest = as.numeric(!is.na(sapply(COMB$binomial, function(i) str_extract(IUCN[IUCN$species == i, "briefCode"], "1")))),
+         iucn_savanna = as.numeric(!is.na(sapply(COMB$binomial, function(i) str_extract(IUCN[IUCN$species == i, "briefCode"], "2")))),
+         iucn_shrubland = as.numeric(!is.na(sapply(COMB$binomial, function(i) str_extract(IUCN[IUCN$species == i, "briefCode"], "3")))),
+         iucn_grassland = as.numeric(!is.na(sapply(COMB$binomial, function(i) str_extract(IUCN[IUCN$species == i, "briefCode"], "4")))),
+         iucn_wetlands = as.numeric(!is.na(sapply(COMB$binomial, function(i) str_extract(IUCN[IUCN$species == i, "briefCode"], "5")))),
+         iucn_rocky = as.numeric(!is.na(sapply(COMB$binomial, function(i) str_extract(IUCN[IUCN$species == i, "briefCode"], "6")))),
+         iucn_caves = as.numeric(!is.na(sapply(COMB$binomial, function(i) str_extract(IUCN[IUCN$species == i, "briefCode"], "7")))),
+         iucn_desert = as.numeric(!is.na(sapply(COMB$binomial, function(i) str_extract(IUCN[IUCN$species == i, "briefCode"], "8")))),
+         iucn_marineneritic = as.numeric(!is.na(sapply(COMB$binomial, function(i) str_extract(IUCN[IUCN$species == i, "briefCode"], "9")))),
+         iucn_marineoceanic = as.numeric(!is.na(sapply(COMB$binomial, function(i) str_extract(IUCN[IUCN$species == i, "briefCode"], "10")))),
+         iucn_marinedeep = as.numeric(!is.na(sapply(COMB$binomial, function(i) str_extract(IUCN[IUCN$species == i, "briefCode"], "11")))),
+         iucn_marineintertidal = as.numeric(!is.na(sapply(COMB$binomial, function(i) str_extract(IUCN[IUCN$species == i, "briefCode"], "12")))),
+         iucn_marinecoastal = as.numeric(!is.na(sapply(COMB$binomial, function(i) str_extract(IUCN[IUCN$species == i, "briefCode"], "13")))),
+         iucn_artificialterr = as.numeric(!is.na(sapply(COMB$binomial, function(i) str_extract(IUCN[IUCN$species == i, "briefCode"], "14")))),
+         iucn_artificialaquatic = as.numeric(!is.na(sapply(COMB$binomial, function(i) str_extract(IUCN[IUCN$species == i, "briefCode"], "15")))),
+         iucn_introducedveg = as.numeric(!is.na(sapply(COMB$binomial, function(i) str_extract(IUCN[IUCN$species == i, "briefCode"], "16")))),
+         iucn_moistforest = as.numeric(sapply(COMB$binomial, function(i) sum(!is.na(str_extract(unlist(strsplit(IUCN[IUCN$species == i, "fullCodeSuitable"], ",")), "1.6|1.9")))) > 0),
+         iucn_moistsavanna = sapply(COMB$binomial, function(i) sum(!is.na(str_extract(unlist(strsplit(IUCN[IUCN$species == i, "fullCodeSuitable"], ",")), "2.2")))))
+SPECS %<>%
+  mutate(original_species = species)
+#change some names to match
+SPECS %<>%
+  mutate(species = case_when(species == "Mimon crenulatum" ~ "Gardnerycteris crenulatum",
+                             species == "Taphozous longimanes" ~ "Taphozous longimanus",
+                             species == "Vampyressa bidens" ~ "Vampyriscus bidens",
+                             species == "Myonycteris angolensis" ~ "Lissonycteris angolensis",
+                             species == "Mormoops blainvillii" ~ "Mormoops blainvillei",
+                             species == "Artibeus glaucus" ~ "Dermanura glauca",
+                             species == "Neoromicia nanus" ~ "Neoromicia nana",
+                             species == "Myopterus daubentoni" ~ "Myopterus daubentonii",
+                             species == "Miniopterus fuliginosus" ~ "Miniopterus schreibersii",
+                             species == "Myotis ricketti" ~ "Myotis pilosus",
+                             T ~ species))
+#SPECS[is.na(match(SPECS$species, COMB$binomial)), "species"]
+SPECS <- cbind(SPECS, COMB[match(SPECS$species, COMB$binomial), c(1:2, 7:96)])
+```
+
+Next we add in the data relating to phylogenetic information. As we are dealing with multiple sets of names referencing the consensus at different times (e.g., the creation of the COMBINE database, the creation of these phylogenetic trees, the newest instantiation of the Mammal Diversity Database), we will create a column matching the species name to what is used in these phylogenetic trees (`tree_match`). Although not ideal, I've done most of this relabeling using the `case_when` function as it allows the user to explicitly see which names are changed.
+The phylogenetic information that we use are the trees from [Upham et al. 2019](https://doi.org/10.1371/journal.pbio.3000494). For further information of these data, I would recommend that the reader go to the [VertLife page for them](https://vertlife.org/data/mammals/), which details that the consensus trees with imputed species must be used in larger quantities for any analysis (shown below).
+```{r phylodata}
+#TREE <- lapply(list.files(path = "~/Downloads/Completed_5911sp_topoCons_FBDasZhouEtAl/", full.names = T), function(i) treeio::read.tree(file = i)) 
+SPECS %<>%
+  mutate(tree_match = original_species)
+#setdiff(SPECS$species, gsub("_", " ", TREE[[1]]$tip.label))
+SPECS %<>%
+  mutate(tree_match = case_when(tree_match == "Unidentified Phyllostomid" ~ NA,
+                                tree_match == "Unidentified Vespertillionid" ~ NA,
+                                tree_match == "Taphozous longimanes" ~ "Taphozous longimanus",
+                                tree_match == "Nycteris sp." ~ NA,
+                                tree_match == "Unidentified bat" ~ NA,
+                                tree_match == "Rhinolophus sp" ~ NA,
+                                tree_match == "Miniopterus nimbae" ~ NA,
+                                tree_match == "Mormoops blainvillii" ~ "Mormoops blainvillei",
+                                tree_match == "Pteronotus rubiginosus" ~ "Pteronotus parnellii",
+                                tree_match == "Artibeus glaucus" ~ "Dermanura glaucus",
+                                tree_match == "Mops cf" ~ NA,
+                                tree_match == "Neoromicia nanus" ~ "Neoromicia nana",
+                                tree_match == "Megaderma sp" ~ NA,
+                                tree_match == "Myopterus daubentoni" ~ "Myopterus daubentonii",
+                                tree_match == "Unidentified Molossid" ~ NA,
+                                tree_match == "Pteropus sp" ~ NA,
+                                tree_match == "Myotis ricketti" ~ "Myotis pilosus",
+                                tree_match == "Epomophorus minor" ~ "Epomophorus minimus",
+                                T ~ tree_match))
+COMB %<>%
+  mutate(tree_match = binomial) %>%
+  mutate(tree_match = case_when(tree_match %in% c("Artibeus schwartzi", "Carollia monohernandezi", "Chaerephon jobimena", "Chiroderma vizzotoi", "Cynomops milleri", "Eptesicus taddeii", "Hipposideros khasiana", "Miniopterus africanus", "Mormopterus kalinowskii", "Myonycteris leptodon", "Myotis annatessae", "Myotis indochinensis", "Myotis nyctor", "Myotis rufoniger", "Myotis sibiricus", "Neoromicia isabella", "Artibeus anthonyi", "Desmodus puntajudensis", "Desmodus stocki", "Mormoops magna", "Phyllonycteris major", "Phyllops silvai", "Platyrrhinus aquilus", "Plecotus ariel", "Plecotus homochrous", "Plecotus kozlovi", "Plecotus strelkovi", "Plecotus turkmenicus", "Plecotus wardi", "Promops davisoni", "Pteronotus mesoamericanus", "Pteronotus rubiginosus", "Pteropus allenorum", "Pteropus coxi", "Pteropus leucopterus", "Vampyrodes major") ~ NA,
+                                tree_match == "Anoura aequatoris" ~ "Anoura caudifer",
+                                tree_match == "Anoura cadenai"  ~  "Anoura caudifer", 
+                                tree_match == "Anoura carishina"  ~  "Anoura geoffroyi",
+                                tree_match == "Anoura peruana"  ~  "Anoura geoffroyi", 
+                                tree_match ==  "Artibeus aequatorialis"  ~  "Artibeus jamaicensis",
+                                tree_match ==  "Asellia italosomalica"  ~  "Asellia tridens",
+                                tree_match ==  "Austronomus australis"  ~  "Tadarida australis", 
+                                tree_match ==  "Austronomus kuboriensis"  ~  "Tadarida kuboriensis", 
+                                tree_match ==  "Baeodon alleni"  ~  "Rhogeessa alleni",
+                                tree_match ==  "Baeodon gracilis"  ~  "Rhogeessa gracilis",
+                                tree_match ==  "Balionycteris seimundi"  ~  "Balionycteris maculata",
+                                tree_match ==  "Barbastella darjelingensis"  ~  "Barbastella leucomelas",
+                                tree_match ==  "Boneia bidens"  ~  "Rousettus bidens",
+                                tree_match ==  "Chaerephon leucogaster"  ~  "Chaerephon pumilus",
+                                tree_match ==  "Chaerephon pusillus"  ~  "Chaerephon pumilus",
+                                tree_match ==  "Chilonatalus macer"  ~  "Chilonatalus micropus",
+                                tree_match ==  "Dermanura azteca"  ~  "Dermanura aztecus",
+                                tree_match ==  "Dermanura cinerea"  ~  "Dermanura cinereus",
+                                tree_match ==  "Dermanura glauca"  ~  "Dermanura glaucus",
+                                tree_match ==  "Dermanura gnoma"  ~  "Dermanura gnomus",
+                                tree_match ==  "Dermanura rosenbergi"  ~  "Dermanura rosenbergii",
+                                tree_match ==  "Dermanura tolteca"  ~  "Dermanura toltecus",
+                                tree_match ==  "Diclidurus isabella"  ~  "Diclidurus isabellus",
+                                tree_match ==  "Dobsonia magna"  ~  "Dobsonia moluccensis",
+                                tree_match ==  "Epomophorus minor"  ~  "Epomophorus minimus",
+                                tree_match ==  "Eptesicus anatolicus"  ~  "Eptesicus bottae",
+                                tree_match ==  "Eptesicus ognevi"  ~  "Eptesicus bottae",
+                                tree_match ==  "Eumops delticus"  ~  "Eumops bonariensis",
+                                tree_match ==  "Eumops nanus"  ~  "Eumops bonariensis",
+                                tree_match ==  "Gardnerycteris crenulatum"  ~  "Mimon crenulatum",
+                                tree_match ==  "Gardnerycteris koepckeae"  ~  "Mimon koepckeae",
+                                tree_match ==  "Hipposideros atrox"  ~  "Hipposideros bicolor",
+                                tree_match ==  "Hipposideros nicobarulae"  ~  "Hipposideros bicolor",
+                                tree_match ==  "Hipposideros pendlebury"  ~  "Hipposideros turpis",
+                                tree_match ==  "Hipposideros tephrus"  ~  "Hipposideros caffer",
+                                tree_match ==  "Hypsugo affinis"  ~  "Falsistrellus affinis",
+                                tree_match ==  "Hypsugo alaschanicus"  ~  "Pipistrellus alaschanicus",
+                                tree_match ==  "Hypsugo anthonyi"  ~  "Pipistrellus anthonyi",
+                                tree_match ==  "Hypsugo arabicus"  ~  "Pipistrellus arabicus",
+                                tree_match ==  "Hypsugo ariel"  ~  "Pipistrellus ariel",
+                                tree_match ==  "Hypsugo cadornae"  ~  "Pipistrellus cadornae",
+                                tree_match ==  "Hypsugo eisentrauti"  ~  "Pipistrellus eisentrauti",
+                                tree_match ==  "Hypsugo joffrei"  ~  "Pipistrellus joffrei",
+                                tree_match ==  "Hypsugo kitcheneri"  ~  "Pipistrellus kitcheneri",
+                                tree_match ==  "Hypsugo lophurus"  ~  "Pipistrellus lophurus",
+                                tree_match ==  "Hypsugo macrotis"  ~  "Pipistrellus macrotis",
+                                tree_match ==  "Hypsugo musciculus"  ~  "Pipistrellus musciculus",
+                                tree_match ==  "Hypsugo pulveratus"  ~  "Pipistrellus pulveratus",
+                                tree_match ==  "Hypsugo savii"  ~  "Pipistrellus savii",
+                                tree_match ==  "Hypsugo vordermanni"  ~  "Pipistrellus vordermanni",
+                                tree_match ==  "Kerivoula crypta"  ~  "Kerivoula hardwickii",
+                                tree_match ==  "Kerivoula depressa"  ~  "Kerivoula hardwickii",
+                                tree_match ==  "Kerivoula dongduongana"  ~  "Kerivoula hardwickii",
+                                tree_match ==  "Kerivoula furva"  ~  "Kerivoula hardwickii",
+                                tree_match ==  "Kerivoula malpasi"  ~  "Kerivoula hardwickii",
+                                tree_match ==  "Lasiurus salinae"  ~  "Lasiurus blossevillii",
+                                tree_match ==  "Lichonycteris degener"  ~  "Lichonycteris obscura",
+                                tree_match ==  "Lissonycteris angolensis"  ~  "Myonycteris angolensis",
+                                tree_match ==  "Lonchophylla cadenai"  ~  "Hsunycteris cadenai",
+                                tree_match ==  "Lonchophylla pattoni"  ~  "Hsunycteris pattoni",
+                                tree_match ==  "Lophostoma occidentalis"  ~  "Lophostoma aequatorialis",
+                                tree_match ==  "Lyroderma lyra"  ~  "Megaderma lyra",
+                                tree_match ==  "Macronycteris commersoni"  ~  "Hipposideros commersoni",
+                                tree_match ==  "Macronycteris gigas"  ~  "Hipposideros gigas",
+                                tree_match ==  "Macronycteris thomensis"  ~  "Hipposideros thomensis",
+                                tree_match ==  "Macronycteris vittatus"  ~  "Hipposideros vittatus",
+                                tree_match ==  "Miniopterus pallidus"  ~  "Miniopterus schreibersii",
+                                tree_match ==  "Molossus bondae"  ~  "Molossus currentium",
+                                tree_match ==  "Mormopterus cobourgianus"  ~  "Mormopterus loriae",
+                                tree_match ==  "Mormopterus ridei"  ~  "Mormopterus loriae",
+                                tree_match ==  "Murina feae"  ~  "Murina cineracea",
+                                tree_match ==  "Murina lorelieae"  ~  "Murina loreliae",
+                                tree_match ==  "Myotis borneoensis"  ~  "Myotis montivagus",
+                                tree_match ==  "Myotis federatus"  ~  "Myotis montivagus",
+                                tree_match ==  "Myotis longicaudatus"  ~  "Myotis frater",
+                                tree_match ==  "Myotis peytoni"  ~  "Myotis montivagus",
+                                tree_match ==  "Myotis weberi"  ~  "Myotis formosus",
+                                tree_match ==  "Nyctophilus daedalus"  ~  "Nyctophilus bifax",
+                                tree_match ==  "Nyctophilus major"  ~  "Nyctophilus sherrini",
+                                tree_match ==  "Otomops harrisoni"  ~  "Otomops martiensseni",
+                                tree_match ==  "Otonycteris leucophaea"  ~  "Otonycteris hemprichii",
+                                tree_match ==  "Ozimops loriae"  ~  "Mormopterus loriae",
+                                tree_match ==  "Ozimops petersi"  ~  "Mormopterus loriae",
+                                tree_match ==  "Paremballonura atrata"  ~  "Emballonura atrata",
+                                tree_match ==  "Paremballonura tiavato"  ~  "Emballonura tiavato",
+                                tree_match ==  "Perimyotis subflavus"  ~  "Pipistrellus subflavus",
+                                tree_match ==  "Pipistrellus aladdin"  ~  "Pipistrellus pipistrellus",
+                                tree_match ==  "Pipistrellus anchietae"  ~  "Hypsugo anchietae",
+                                tree_match ==  "Pipistrellus grandidieri"  ~  "Neoromicia flavescens",
+                                tree_match ==  "Platyrrhinus incarum"  ~  "Platyrrhinus helleri",
+                                tree_match ==  "Pteropus ennisae"  ~  "Pteropus capistratus",
+                                tree_match ==  "Rhinolophus belligerator"  ~  "Rhinolophus arcuatus",
+                                tree_match ==  "Rhinolophus chiewkweeae"  ~  "Rhinolophus pearsonii",
+                                tree_match ==  "Rhinolophus damarensis"  ~  "Rhinolophus darlingi",
+                                tree_match ==  "Rhinolophus indorouxii"  ~  "Rhinolophus rouxii",
+                                tree_match ==  "Rhinolophus mcintyrei"  ~  "Rhinolophus arcuatus",
+                                tree_match ==  "Rhinolophus microglobosus"  ~  "Rhinolophus stheno",
+                                tree_match ==  "Rhinolophus perditus"  ~  "Rhinolophus pusillus",
+                                tree_match ==  "Rhinolophus proconsulis"  ~  "Rhinolophus arcuatus",
+                                tree_match ==  "Rhinolophus tatar"  ~  "Rhinolophus euryotis",
+                                tree_match ==  "Rhinopoma cystops"  ~  "Rhinopoma hardwickii",
+                                tree_match ==  "Rhogeessa velilla"  ~  "Rhogeessa io",
+                                tree_match ==  "Rhyneptesicus nasutus"  ~  "Eptesicus nasutus",
+                                tree_match ==  "Scotonycteris ophiodon"  ~  "Casinycteris ophiodon",
+                                tree_match ==  "Vampyriscus bidens"  ~  "Vampyressa bidens",
+                                tree_match ==  "Vampyriscus brocki"  ~  "Vampyressa brocki",
+                                tree_match ==  "Vampyriscus nymphaea"  ~  "Vampyressa nymphaea",
+                                T ~ tree_match))
+MAMM <- treeio::read.beast("~/Downloads/MamPhy_fullPosterior_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_MCC_v2_target.tre")
+ORDS <- sapply(strsplit(MAMM@phylo$tip.label, "_"), function(x) unlist(x)[4])
+MAMM <- drop.tip(MAMM@phylo, which(!ORDS %in% c("CHIROPTERA")))
+NAME <- cbind.data.frame(family = sapply(strsplit(MAMM$tip.label, "_"), function(x) unlist(x)[3]),
+                         species = sapply(strsplit(MAMM$tip.label, "_"), function(i) paste(i[1], i[2], collapse = "_")))
+NAME$species <- gsub(pattern = " ", "_", NAME$species)
+MAMM$tip.label <- NAME$species
+# set.seed(1876)
+# SAMP <- sample(1:10000, 1000)
+# TREE <- TREE[SAMP]
+# DIST <- foreach(i = 1:1000) %do% {
+#   DIST <- ape::cophenetic.phylo(TREE[[i]])
+# }
+# DIST <- do.call(analogue::fuse, DIST) 
+load("~/Downloads/Filovirus/MammalPhyloDistance_1000trees.Rdata") #DIST
+PCOA <- ape::pcoa(DIST[NAME$species, NAME$species]) #17 axes include 90% of bat variation
+PCOA$vectors[, 1:17] %>%
+  data.frame() %>%
+  ggplot() +
+  geom_point(aes(x = Axis.1,
+                 y = Axis.2))
+PCA <- PCOA$vectors[, 1:17] %>%
+  data.frame() %>%
+  mutate(tree_match = gsub("_", " ", row.names(PCOA$vectors)))
+colnames(PCA)[1:17] <- paste("pco", 1:17, sep = "_")        
+SPECS %<>%
+  left_join(PCA, by = "tree_match", relationship = "many-to-many")
+COMB %<>%
+  left_join(PCA, by = "tree_match", relationship = "many-to-many")
+```
+
+We next add variables from multiple other studies, with those being [Guy et al. 2020](https://doi.org/10.1002/ece3.6315), [Luis et al. 2013](https://doi.org/10.1098/rspb.2012.2753), and [Crane et al. 2021](https://doi.org/10.1111/mam.12270).
+```{r extratraits}
+TRT <- read.csv("~/Downloads/doi_10_5061_dryad_d51c5b000__v20210413/Combined_Trait_Dataset_Dec2018.csv")
+TRT %<>%
+  mutate(Binomial = case_when(Binomial == "Myotis ricketti" ~ "Myotis pilosus",
+                              Binomial == "Miniopterus fuliginosus" ~ "Miniopterus fuliginosus",
+                              Binomial == "Hipposideros gigas" ~ "Macronycteris gigas",
+                              Binomial == "Rhinolophus monoceros" ~ "Rhinolophus pusillus",
+                              Binomial == "Nyctalus velutinus" ~ "Nyctalus velutinus",
+                              Binomial == "Megaderma lyra" ~ "Lyroderma lyra",
+                              Binomial == "Hipposideros commersoni" ~ "Macronycteris commersonii",
+                              Binomial == "Neoromicia nanus" ~ "Neoromicia nana",
+                              Binomial == "Pipistrellus subflavus" ~ "Perimyotis subflavus",
+                              Binomial == "Artibeus glaucus" ~ "Dermanura glauca",
+                              Binomial == "Rhinolophus blythi" ~ "Rhinolophus pusillus",
+                              Binomial == "Myotis oxygnathus" ~ "Myotis blythii",
+                              Binomial == "Rhinolophus cornutus" ~ "Rhinolophus cornutus",
+                              Binomial == "Eptesicus nilssoni" ~ "Eptesicus nilssonii",
+                              Binomial == "Artibeus phaeotis" ~ "Dermanura phaeotis",
+                              Binomial == "Plecotus rafinesquii" ~ "Corynorhinus rafinesquii",
+                              Binomial == "Mimon crenulatum" ~ "Gardnerycteris crenulatum",
+                              Binomial == "Rhinolophus hildebrandti" ~ "Rhinolophus hildebrandtii",
+                              Binomial == "Diclidurus isabellus" ~ "Diclidurus isabella",
+                              Binomial == "Emballonura atrata" ~ "Paremballonura atrata",
+                              Binomial == "Emballonura tiavato" ~ "Paremballonura tiavato",
+                              Binomial == "Hipposideros terasensis" ~ "Hipposideros terasensis",
+                              Binomial == "Triaenops auritus" ~ "Paratriaenops auritus",
+                              Binomial == "Triaenops furculus" ~ "Paratriaenops furcula",
+                              Binomial == "Miniopterus newtonii" ~ "Miniopterus newtoni",
+                              Binomial == "Miniopterus propitristis" ~ "Miniopterus tristis",
+                              Binomial == "Molossus ater" ~ "Molossus ater",
+                              Binomial == "Mormoops blainvillii" ~ "Mormoops blainvillei",
+                              Binomial == "Pteronotus pusillus" ~ "Pteronotus pusillus",
+                              Binomial == "Natalus saturatus" ~ "Natalus saturatus",
+                              Binomial == "Artibeus anderseni" ~ "Dermanura anderseni",
+                              Binomial == "Artibeus aztecus" ~ "Dermanura azteca",
+                              Binomial == "Artibeus hartii" ~ "Enchisthenes hartii",
+                              Binomial == "Artibeus intermedius" ~ "Artibeus intermedius",
+                              Binomial == "Artibeus toltecus" ~ "Dermanura tolteca",
+                              Binomial == "Brachyphylla pumila" ~ "Brachyphylla nana",
+                              Binomial == "Dermanura incomitata" ~ "Dermanura watsoni",
+                              Binomial == "Micronycteris brachyotis" ~ "Lampronycteris brachyotis",
+                              Binomial == "Micronycteris homezi" ~ "Micronycteris minuta",
+                              Binomial == "Micronycteris nicefori" ~ "Trinycteris nicefori",
+                              Binomial == "Phyllonycteris obtusa" ~ "Phyllonycteris poeyi",
+                              Binomial == "Vampyressa bidens" ~ "Vampyriscus bidens",
+                              Binomial == "Vampyressa brocki" ~ "Vampyriscus brocki",
+                              Binomial == "Vampyressa nymphaea" ~ "Vampyriscus nymphaea",
+                              Binomial == "Desmalopex leucopterus" ~ "Desmalopex leucoptera",
+                              Binomial == "Myonycteris angolensis" ~ "Myonycteris angolensis",
+                              Binomial == "Stenonycteris lanosus" ~ "Stenonycteris lanosa",
+                              Binomial == "Rhinolophus chaseni" ~ "Rhinolophus chaseni",
+                              Binomial == "Rhinolophus pumilus" ~ "Rhinolophus pumilus",
+                              Binomial == "Rhinolophus yunnanensis" ~ "Rhinolophus yunanensis",
+                              Binomial == "Antrozous dubiaquercus" ~ "Bauerus dubiaquercus",
+                              Binomial == "Chalinolobus argentatus" ~ "Glauconycteris argentata",
+                              Binomial == "Chalinolobus beatrix" ~ "Glauconycteris beatrix",
+                              Binomial == "Chalinolobus poensis" ~ "Glauconycteris poensis",
+                              Binomial == "Chalinolobus variegatus" ~ "Glauconycteris variegata",
+                              Binomial == "Eptesicus andersoni" ~ "Eptesicus serotinus",
+                              Binomial == "Eptesicus nasutus" ~ "Rhyneptesicus nasutus",
+                              Binomial == "Eptesicus regulus" ~ "Vespadelus regulus",
+                              Binomial == "Eptesicus sagittula" ~ "Vespadelus darlingtoni",
+                              Binomial == "Eptesicus vulturnus" ~ "Vespadelus vulturnus",
+                              Binomial == "Harpiocephalus mordax" ~ "Harpiocephalus harpia",
+                              Binomial == "Hypsugo crassulus" ~ "Nycticeinops crassulus",
+                              Binomial == "Murina cineracea" ~ "Murina feae",
+                              Binomial == "Murina ryukyuna" ~ "Murina ryukyuana",
+                              Binomial == "Murina tiensa" ~ "Murina harrisoni",
+                              Binomial == "Myotis flavus" ~ "Myotis formosus",
+                              Binomial == "Myotis gracilis" ~ "Myotis sibiricus",
+                              Binomial == "Myotis latirostris" ~ "Submyotodon latirostris",
+                              Binomial == "Myotis phanluongi" ~ "Myotis phanluongi",
+                              Binomial == "Myotis watasei" ~ "Myotis formosus",
+                              Binomial == "Neoromicia brunneus" ~ "Pseudoromicia brunnea",
+                              Binomial == "Neoromicia somalicus" ~ "Neoromicia somalica",
+                              Binomial == "Pipistrellus deserti" ~ "Pipistrellus kuhlii",
+                              Binomial == "Rhogeessa alleni" ~ "Baeodon alleni",
+                              Binomial == "Rhogeessa gracilis" ~ "Baeodon gracilis",
+                              T ~ Binomial))
+VARS <- colnames(TRT)[c(12, 14, 16, 19, 24, 26, 27, 29, 31, 35)]
+TRT[115, "RWL"] <- 76.51745
+TRT[115, "AR"] <- 11.1
+TRT <- TRT[-373, ]
+TRT <- TRT[c(428, 652, 644, 650, 668, 472, 355, 169, 726, 759, 485, 777, 49, 144) * -1, ]
+LUIS <- read.csv("~/Downloads/Luis2013ProcB.csv")
+LUIS <- do.call(rbind.data.frame, lapply(c(1:46, 48:51, 53:68), function(i) t(cbind.data.frame(unlist(strsplit(gsub(", ", ",", LUIS[i, 1]), " "))))))
+row.names(LUIS) <- NULL
+colnames(LUIS) <- c("order", "genus", "species", "mass", "lit.sz", "lit.yr", "longev", "torp", "migr", "IUCN", "area", "lat", "sympatry", "cit", "viruses", "zoon", "ref")
+LUIS %<>%
+  mutate(binomial = paste(genus, species, sep = " "))
+SUPP <- read.csv("~/Downloads/Supplementary Files/Code and Data/Data/wingReview_wm_data_speciesLevel.csv")
+
+EXT <- foreach(i = SPECS$species, .combine = "rbind") %do% {
+  traits <- TRT[, c("Binomial", VARS)] %>%
+    filter(Binomial == i)
+  if(nrow(traits) == 0) {
+    traits <- cbind.data.frame(Binomial = i,
+                               RWL = NA,
+                               AR = NA,
+                               Forearm = NA,
+                               Pulse = NA,
+                               Sympatry = NA,
+                               Group.Size = NA,
+                               Roost = NA,
+                               Torpor = NA,
+                               Migration = NA,
+                               sin_No_Mixed = NA)
+  }
+  if(i %in% SUPP$scientificName.iucn) {
+    if(is.na(traits$RWL)) traits$RWL <- SUPP[SUPP$scientificName.iucn == i, "relWingLoading"]
+    if(is.na(traits$AR)) traits$AR <- SUPP[SUPP$scientificName.iucn == i, "aspectRatio"]
+    if(is.na(traits$Forearm)) traits$Forearm <- SUPP[SUPP$scientificName.iucn == i, "forearm_mm"]
+  }
+  if(i %in% LUIS$binomial) {
+    if(is.na(traits$Migration)) traits$Migration <- LUIS[LUIS$binomial == i, "migr"]
+    if(is.na(traits$Torpor)) traits$Torpor <- LUIS[LUIS$binomial == i, "torp"]
+  }
+  traits
+}
+EXT %<>%
+  mutate(Migration = case_when(Migration == "1" ~ 0,
+                               Migration == "2" ~ 1,
+                               Migration == "N" ~ 0,
+                               Migration == "Y" ~ 1),
+         Torpor = case_when(Torpor == "NT" ~ 0,
+                            Torpor == "T" ~ 1,
+                            Torpor == "H" ~ 1),
+         cave_roost = as.numeric(Roost == "CV"),
+         cavity_roost = as.numeric(Roost == "C"),
+         foliage_roost = as.numeric(Roost == "F"),
+         generalist_roost = as.numeric(Roost == "G"))
+EXT$sin_No_Mixed <- sinh(EXT$sin_No_Mixed)
+colnames(EXT) <- c("binomial", "relative_wing_loading", "aspect_ratio", "forearm_mm", "birthing_pulses_yr", "sympatry", "median_aggregation_size", "roost", "torpor", "migration", "mixed_species_association_n", "cave_roost", "cavity_roost", "foliage_roost", "generalist_roost")
+SPECS %<>%
+  left_join(EXT, by = c("species" = "binomial"), relationship = "many-to-many")
+  
+
+EXTP <- foreach(i = COMB$binomial, .combine = "rbind") %do% {
+  traits <- TRT[, c("Binomial", VARS)] %>%
+    filter(Binomial == i)
+  if(nrow(traits) == 0) {
+    traits <- cbind.data.frame(Binomial = i,
+                               RWL = NA,
+                               AR = NA,
+                               Forearm = NA,
+                               Pulse = NA,
+                               Sympatry = NA,
+                               Group.Size = NA,
+                               Roost = NA,
+                               Torpor = NA,
+                               Migration = NA,
+                               sin_No_Mixed = NA)
+  }
+  if(i %in% SUPP$scientificName.iucn) {
+    if(is.na(traits$RWL)) traits$RWL <- SUPP[SUPP$scientificName.iucn == i, "relWingLoading"]
+    if(is.na(traits$AR)) traits$AR <- SUPP[SUPP$scientificName.iucn == i, "aspectRatio"]
+    if(is.na(traits$Forearm)) traits$Forearm <- SUPP[SUPP$scientificName.iucn == i, "forearm_mm"]
+  }
+  if(i %in% LUIS$binomial) {
+    if(is.na(traits$Migration)) traits$Migration <- LUIS[LUIS$binomial == i, "migr"]
+    if(is.na(traits$Torpor)) traits$Torpor <- LUIS[LUIS$binomial == i, "torp"]
+  }
+  traits
+}
+
+EXTP %<>%
+  mutate(Migration = case_when(Migration == "1" ~ 0,
+                               Migration == "2" ~ 1,
+                               Migration == "N" ~ 0,
+                               Migration == "Y" ~ 1),
+         Torpor = case_when(Torpor == "NT" ~ 0,
+                            Torpor == "T" ~ 1,
+                            Torpor == "H" ~ 1),
+         cave_roost = as.numeric(Roost == "CV"),
+         cavity_roost = as.numeric(Roost == "C"),
+         foliage_roost = as.numeric(Roost == "F"),
+         generalist_roost = as.numeric(Roost == "G"))
+EXTP$sin_No_Mixed <- sinh(EXTP$sin_No_Mixed)
+colnames(EXTP) <- c("binomial", "relative_wing_loading", "aspect_ratio", "forearm_mm", "birthing_pulses_yr", "sympatry", "median_aggregation_size", "roost", "torpor", "migration", "mixed_species_association_n", "cave_roost", "cavity_roost", "foliage_roost", "generalist_roost")
+COMB[1158, "hibernation_torpor"] <- 1
+COMB %<>%
+  left_join(EXTP, by = "binomial", relationship = "many-to-many")
+```
+
+Next we create variables reflecting the aridity levels that these species experience. Instead of using polygons to determine these indices, we rely on occurrence records reflecting the location (within a reasonable level of uncertainty :)) of a species at a point in time. We use these to generate the minimum aridity index, mean aridity index, median aridity index, standard deviation of the aridity indices, and the thresholds that represents 80% and 90% of the aridity indices, along with the number of records used to create these measurements. As above, we use a new column (`gbif_match`) to allow for interaction with these estimates.
+```{r aridityindex}
+# OCCS <- read.delim("~/Downloads/0085403-240229165702484.csv")
+# OCCS %<>%
+#   filter(year != "",
+#          year != 2024)
+# OCCS[OCCS$year == "2011-03-28", "year"] <- 2011
+# OCCS <- OCCS[-432420, ]
+# PTER <- OCCS %>%
+#   filter(species == "Pteronotus quadridens")
+# #cl <- parallel::makeCluster(2, "SOCK")
+# #doSNOW::registerDoSNOW(cl)
+# EXV <- foreach(i = unique(OCCS$year), .combine = "rbind", .packages = c("magrittr", "dplyr", "sf", "terra", "foreach")) %do% {
+#   subs <- OCCS %>%
+#     filter(year == i) %>%
+#     st_as_sf(coords = c("decimalLongitude", "decimalLatitude"), crs = 4326)
+#   pet <- sum(rast(paste0("~/Desktop/PET/TerraClimate_pet_", i, ".nc")))
+#   ppt <- sum(rast(paste0("~/Desktop/precipitation/TerraClimate_ppt_", i, ".nc")))
+#   subs %>%
+#     mutate(aridity_index = terra::extract(ppt/pet, vect(subs))[, -1])
+#   }
+# EXV %<>%
+#   filter(species != "Falsistrellus mackenziei",
+#          species != "") %>%
+#   data.frame() %>%
+#   dplyr::select(-geometry) %>%
+#   group_by(species) %>%
+#   summarise(min_aridity_index = min(aridity_index, na.rm = T),
+#             mean_aridity_index = mean(aridity_index, na.rm = T),
+#             median_aridity_index = median(aridity_index, na.rm = T),
+#             sd_aridity_index = sd(aridity_index, na.rm = T),
+#             perc80_aridity_index = quantile(aridity_index, 0.8, na.rm = T),
+#             perc90_aridity_index = quantile(aridity_index, 0.9, na.rm = T),
+#             n = n()) 
+# GBIF <- lapply(1:426, function(i) rgbif::name_backbone(PRED[which(is.na(match(PRED$gbif_match, EXV$species))), "binomial"][i]))
+# GBIF <- do.call(rbind, lapply(1:426, function(i) {
+#   GBIF[[i]] %>%
+#     mutate(syn_name = ifelse(status == "SYNONYM", species, NA)) %>%
+#     dplyr::select(canonicalName, status, confidence, matchType, syn_name) %>%
+#     mutate(data_name = PRED[which(is.na(match(PRED$gbif_match, EXV$species))), "binomial"][i])
+#     }))
+EXV <- read.csv("BatAridityIndex.csv")
+SPECS %<>%
+  mutate(gbif_match = original_species) %>%
+  mutate(gbif_match = case_when(gbif_match %in% c("Unidentified Phyllostomid", "Unidentified Vespertillionid", "Nycteris sp.", "Unidentified bat", "Rhinolophus sp", "Megaderma sp", "Mops cf", "Pteropus sp", "Unidentified Molossid") ~ NA,
+                                gbif_match == "Mimon crenulatum" ~ "Gardnerycteris crenulatum",
+                                gbif_match == "Diaemus youngi" ~ "Diaemus youngii",
+                                gbif_match == "Taphozous longimanes" ~ "Taphozous longimanus",
+                                gbif_match == "Neoromicia rendalli" ~ "Pseudoromicia rendalli",
+                                gbif_match == "Carollia brevicauda" ~ "Carollia brevicaudum",
+                                gbif_match == "Neoromicia nanus" ~ "Afronycteris nanus",
+                                gbif_match == "Micropteropus pusillus" ~ "Epomophorus pusillus",
+                                gbif_match == "Vampyressa bidens"  ~ "Vampyriscus bidens",
+                                gbif_match == "Mormoops blainvillii" ~ "Mormoops blainvillei",
+                                gbif_match == "Pteropus giganteus" ~ "Pteropus medius",
+                                gbif_match == "Myopterus daubentoni" ~ "Myopterus daubentonii",
+                                gbif_match == "Myotis ricketti" ~ "Myotis pilosus",
+                                gbif_match == "Nycticeinops schlieffeni" ~ "Nycticeinops schlieffenii",
+                                T ~ gbif_match)) %>%
+  left_join(EXV, by = c("gbif_match" = "species"))
+COMB %<>%
+  mutate(gbif_match = binomial) %>%
+  mutate(gbif_match = case_when(gbif_match == "Anoura carishina"  ~  "Anoura latidens",
+                                gbif_match ==  "Arielulus aureocollaris"  ~  "Thainycteris aureocollaris",
+                                gbif_match ==  "Arielulus torquatus"  ~  "Thainycteris torquatus",
+                                gbif_match ==  "Baeodon alleni"  ~  "Rhogeessa alleni",
+                                gbif_match ==  "Baeodon gracilis"  ~  "Rhogeessa gracilis",
+                                gbif_match ==  "Carollia brevicauda"  ~  "Carollia brevicaudum",
+                                gbif_match ==  "Chiroderma vizzotoi"  ~  "Chiroderma doriae",
+                                gbif_match ==  "Cynomops paranus"  ~  "Cynomops planirostris",
+                                gbif_match ==  "Dermanura anderseni"  ~  "Artibeus anderseni",
+                                gbif_match ==  "Dermanura azteca"  ~  "Artibeus aztecus",
+                                gbif_match ==  "Dermanura bogotensis"  ~  "Artibeus bogotensis",
+                                gbif_match ==  "Dermanura cinerea"  ~  "Artibeus cinereus",
+                                gbif_match ==  "Dermanura glauca"  ~  "Artibeus glaucus",
+                                gbif_match ==  "Dermanura gnoma"  ~  "Artibeus gnomus",
+                                gbif_match ==  "Dermanura phaeotis"  ~  "Artibeus phaeotis",
+                                gbif_match ==  "Dermanura rava"  ~  "Artibeus ravus",
+                                gbif_match ==  "Dermanura rosenbergi"  ~  "Artibeus rosenbergi",
+                                gbif_match ==  "Dermanura tolteca"  ~  "Artibeus toltecus",
+                                gbif_match ==  "Dermanura watsoni"  ~  "Artibeus watsoni",
+                                gbif_match ==  "Diaemus youngi"  ~  "Diaemus youngii",
+                                gbif_match ==  "Dobsonia magna"  ~  "Dobsonia moluccensis",
+                                gbif_match ==  "Epomophorus minimus"  ~  "Epomophorus minor",
+                                gbif_match ==  "Epomops dobsonii"  ~  "Epomophorus dobsonii",
+                                gbif_match ==  "Eptesicus bobrinskoi"  ~  "Eptesicus gobiensis",
+                                gbif_match ==  "Eptesicus dimissus"  ~  "Cassistrellus dimissus",
+                                gbif_match ==  "Eptesicus kobayashii"  ~  "Eptesicus serotinus",
+                                gbif_match ==  "Eptesicus lobatus"  ~  "Eptesicus serotinus",
+                                gbif_match ==  "Falsistrellus mordax"  ~  "Hypsugo mordax",
+                                gbif_match ==  "Falsistrellus petersi"  ~  "Hypsugo petersi",
+                                gbif_match ==  "Hipposideros atrox"  ~  "Hipposideros bicolor",
+                                gbif_match ==  "Hipposideros camerunensis"  ~  "Doryrhina camerunensis",
+                                gbif_match ==  "Hipposideros corynophyllus"  ~  "Doryrhina corynophyllus",
+                                gbif_match ==  "Hipposideros cyclops"  ~  "Doryrhina cyclops",
+                                gbif_match ==  "Hipposideros edwardshilli"  ~  "Doryrhina edwardshilli",
+                                gbif_match ==  "Hipposideros muscinus"  ~  "Doryrhina muscinus",
+                                gbif_match ==  "Hipposideros semoni"  ~  "Doryrhina semoni",
+                                gbif_match ==  "Hipposideros stenotis"  ~  "Doryrhina stenotis",
+                                gbif_match ==  "Hipposideros wollastoni"  ~  "Doryrhina wollastoni",
+                                gbif_match ==  "Hypsugo anthonyi"  ~  "Mirostrellus joffrei",
+                                gbif_match ==  "Hypsugo bemainty"  ~  "Neoromicia bemainty",
+                                gbif_match ==  "Hypsugo eisentrauti"  ~  "Nycticeinops eisentrauti",
+                                gbif_match ==  "Hypsugo joffrei"  ~  "Mirostrellus joffrei",
+                                gbif_match ==  "Lasiurus cinereus"  ~  "Aeorestes cinereus",
+                                gbif_match ==  "Lasiurus ega"  ~  "Dasypterus ega",
+                                gbif_match ==  "Lasiurus egregius"  ~  "Aeorestes egregius",
+                                gbif_match ==  "Lasiurus insularis"  ~  "Dasypterus insularis",
+                                gbif_match ==  "Lasiurus intermedius"  ~  "Dasypterus intermedius",
+                                gbif_match ==  "Lasiurus salinae"  ~  "Lasiurus blossevillii",
+                                gbif_match ==  "Lasiurus xanthinus"  ~  "Dasypterus xanthinus",
+                                gbif_match ==  "Lonchophylla cadenai"  ~  "Hsunycteris cadenai",
+                                gbif_match ==  "Lonchophylla pattoni"  ~  "Hsunycteris pattoni",
+                                gbif_match ==  "Lonchophylla thomasi"  ~  "Hsunycteris thomasi",
+                                gbif_match ==  "Lophostoma occidentalis"  ~  "Lophostoma occidentale",
+                                gbif_match ==  "Lophostoma silvicolum"  ~  "Lophostoma silvicola",
+                                gbif_match ==  "Megaerops wetmorei"  ~  "Ptenochirus wetmorei",
+                                gbif_match ==  "Melonycteris fardoulisi"  ~  "Nesonycteris fardoulisi",
+                                gbif_match ==  "Melonycteris woodfordi"  ~  "Nesonycteris woodfordi",
+                                gbif_match ==  "Micropteropus intermedius"  ~  "Epomophorus intermedius",
+                                gbif_match ==  "Micropteropus pusillus"  ~  "Epomophorus pusillus",
+                                gbif_match ==  "Molossops aequatorianus"  ~  "Cabreramops aequatorianus",
+                                gbif_match ==  "Molossops mattogrossensis"  ~  "Neoplatymops mattogrossensis",
+                                gbif_match ==  "Mormopterus beccarii"  ~  "Ozimops beccarii",
+                                gbif_match ==  "Mormopterus cobourgianus"  ~  "Ozimops cobourgianus",
+                                gbif_match ==  "Mormopterus eleryi"  ~  "Setirostris eleryi",
+                                gbif_match ==  "Mormopterus halli"  ~  "Ozimops halli",
+                                gbif_match ==  "Mormopterus kitcheneri"  ~  "Ozimops kitcheneri",
+                                gbif_match ==  "Mormopterus lumsdenae"  ~  "Ozimops lumsdenae",
+                                gbif_match ==  "Mormopterus norfolkensis"  ~  "Micronomus norfolkensis",
+                                gbif_match ==  "Mormopterus planiceps"  ~  "Ozimops planiceps",
+                                gbif_match ==  "Mormopterus ridei"  ~  "Ozimops ridei",
+                                gbif_match ==  "Myotis aelleni"  ~  "Myotis chiloensis",
+                                gbif_match ==  "Myotis aurascens"  ~  "Myotis davidii",
+                                gbif_match ==  "Myotis badius"  ~  "Myotis alticraniatus",
+                                gbif_match ==  "Myotis hajastanicus"  ~  "Myotis davidii",
+                                gbif_match ==  "Myotis melanorhinus"  ~  "Myotis ciliolabrum",
+                                gbif_match ==  "Natalus espiritosantensis"  ~  "Natalus macrourus",
+                                gbif_match ==  "Natalus major"  ~  "Natalus jamaicensis",
+                                gbif_match ==  "Neoromicia brunnea"  ~  "Pseudoromicia brunnea",
+                                gbif_match ==  "Neoromicia capensis"  ~  "Laephotis capensis",
+                                gbif_match ==  "Neoromicia flavescens"  ~  "Nycticeinops grandidieri",
+                                gbif_match ==  "Neoromicia helios"  ~  "Afronycteris helios",
+                                gbif_match ==  "Neoromicia isabella"  ~  "Pseudoromicia isabella",
+                                gbif_match ==  "Neoromicia malagasyensis"  ~  "Laephotis malagasyensis",
+                                gbif_match ==  "Neoromicia matroka"  ~  "Laephotis matroka",
+                                gbif_match ==  "Neoromicia melckorum"  ~  "Laephotis capensis",
+                                gbif_match ==  "Neoromicia nana"  ~  "Afronycteris nanus",
+                                gbif_match ==  "Neoromicia rendalli"  ~  "Pseudoromicia rendalli",
+                                gbif_match ==  "Neoromicia robertsi"  ~  "Laephotis robertsi",
+                                gbif_match ==  "Neoromicia roseveari"  ~  "Pseudoromicia roseveari",
+                                gbif_match ==  "Neoromicia tenuipinnis"  ~  "Pseudoromicia tenuipinnis",
+                                gbif_match ==  "Nycteris madagascariensis"  ~  "Nycteris macrotis",
+                                gbif_match ==  "Nycteris vinsoni"  ~  "Nycteris macrotis",
+                                gbif_match ==  "Nycticeinops schlieffeni"  ~  "Nycticeinops schlieffenii",
+                                gbif_match ==  "Nyctimene minutus"  ~  "Nyctimene albiventer",
+                                gbif_match ==  "Nyctimene sanctacrucis"  ~  "Nyctimene major",
+                                gbif_match ==  "Penthetor lucasi"  ~  "Penthetor lucasii",
+                                gbif_match ==  "Pipistrellus aladdin"  ~  "Pipistrellus pipistrellus",
+                                gbif_match ==  "Pipistrellus anchietae"  ~  "Neoromicia anchietae",
+                                gbif_match ==  "Pipistrellus crassulus"  ~  "Nycticeinops crassulus",
+                                gbif_match ==  "Pipistrellus grandidieri"  ~  "Nycticeinops grandidieri",
+                                gbif_match ==  "Pipistrellus imbricatus"  ~  "Hypsugo imbricatus",
+                                gbif_match ==  "Pipistrellus rueppellii"  ~  "Vansonia rueppellii",
+                                gbif_match ==  "Platyrrhinus chocoensis"  ~  "Platyrrhinus dorsalis",
+                                gbif_match ==  "Platyrrhinus nigellus"  ~  "Platyrrhinus umbratus",
+                                gbif_match ==  "Plecotus ariel"  ~  "Plecotus wardi",
+                                gbif_match ==  "Plecotus teneriffae"  ~  "Plecotus gaisleri",
+                                gbif_match ==  "Ptenochirus jagori"  ~  "Ptenochirus jagorii",
+                                gbif_match ==  "Pteropus giganteus"  ~  "Pteropus medius",
+                                gbif_match ==  "Pteropus intermedius"  ~  "Pteropus vampyrus",
+                                gbif_match ==  "Pteropus leucopterus"  ~  "Desmalopex leucopterus",
+                                gbif_match ==  "Pteropus loochoensis"  ~  "Pteropus mariannus",
+                                gbif_match ==  "Rhinolophus huananus"  ~  "Rhinolophus siamensis",
+                                gbif_match ==  "Rhinolophus paradoxolophus"  ~  "Rhinolophus rex",
+                                gbif_match ==  "Rhogeessa aeneus"  ~  "Rhogeessa aenea",
+                                gbif_match ==  "Rousettus lanosus"  ~  "Stenonycteris lanosus",
+                                gbif_match ==  "Scotonycteris ophiodon"  ~  "Casinycteris ophiodon",
+                                gbif_match ==  "Scotophilus borbonicus"  ~  "Scotophilus trujilloi",
+                                gbif_match ==  "Triaenops rufus"  ~  "Triaenops menamena",
+                                T ~ gbif_match)) %>%
+  left_join(EXV, by = c("gbif_match" = "species"))
+
+```
+
+Clean up the datasets by retaining only the columns that are used in the analysis.
+```{r cleanupcolumns}
+COMB <- COMB[, c("order", "family", "binomial", "tree_match", "gbif_match", "adult_mass_g", "brain_mass_g", "adult_body_length_mm", "adult_forearm_length_mm", "max_longevity_d", "maturity_d", "female_maturity_d", "male_maturity_d", "age_first_reproduction_d", "gestation_length_d", "teat_number_n", "litter_size_n", "litters_per_year_n", "interbirth_interval_d", "neonate_mass_g", "weaning_age_d", "weaning_mass_g", "generation_length_d", "dispersal_km", "density_n_km2", "hibernation_torpor", "fossoriality", "home_range_km2", "social_group_n", "dphy_invertebrate", "dphy_vertebrate", "dphy_plant", "det_inv", "det_vend", "det_vect", "det_vfish", "det_vunk", "det_scav", "det_fruit", "det_nect", "det_seed", "det_plantother", "det_diet_breadth_n", "trophic_level", "foraging_stratum", "activity_cycle", "freshwater", "marine", "terrestrial_non.volant", "terrestrial_volant", "upper_elevation_m", "lower_elevation_m", "altitude_breadth_m", "island_dwelling", "island_endemicity", "disected_by_mountains", "glaciation", "biogeographical_realm", "habitat_breadth_n", "foraging_aerial", "foraging_arboreal", "foraging_ground", "foraging_marine", "foraging_scansorial", "island_mainland", "island_marine", "island_landbridge", "island_endemic", "bio_palearctic", "bio_afrotropical", "bio_antarctic", "bio_australasian", "bio_indomalayan", "bio_nearctic", "bio_neotropical", "bio_oceanian", "iucn_forest", "iucn_savanna", "iucn_shrubland", "iucn_grassland", "iucn_wetlands", "iucn_rocky", "iucn_caves", "iucn_desert", "iucn_marineneritic", "iucn_marineoceanic", "iucn_marinedeep", "iucn_marineintertidal", "iucn_marinecoastal", "iucn_artificialterr", "iucn_artificialaquatic", "iucn_introducedveg", "iucn_moistforest", "iucn_moistsavanna", "relative_wing_loading", "aspect_ratio", "forearm_mm", "median_aggregation_size", "migration", "mixed_species_association_n", "cave_roost", "cavity_roost", "foliage_roost", "generalist_roost", "min_aridity_index", "mean_aridity_index", "perc80_aridity_index", "pco_1", "pco_2", "pco_3", "pco_4", "pco_5", "pco_6", "pco_7", "pco_8", "pco_9", "pco_10", "pco_11", "pco_12", "pco_13", "pco_14", "pco_15", "pco_16", "pco_17")]
+SPECS <- SPECS[, c("species", "ebov_auc", "bomv_auc", "bdbv_auc", "tafv_auc", "restv_auc", "sudv_auc", "mlav_auc", "llov_auc", "marv_auc", "ravn_auc", "orig_species", "order", "family", "tree_match", "gbif_match", "adult_mass_g", "brain_mass_g", "adult_body_length_mm", "adult_forearm_length_mm", "max_longevity_d", "maturity_d", "female_maturity_d", "male_maturity_d", "age_first_reproduction_d", "gestation_length_d", "teat_number_n", "litter_size_n", "litters_per_year_n", "interbirth_interval_d", "neonate_mass_g", "weaning_age_d", "weaning_mass_g", "generation_length_d", "dispersal_km", "density_n_km2", "hibernation_torpor", "fossoriality", "home_range_km2", "social_group_n", "dphy_invertebrate", "dphy_vertebrate", "dphy_plant", "det_inv", "det_vend", "det_vect", "det_vfish", "det_vunk", "det_scav", "det_fruit", "det_nect", "det_seed", "det_plantother", "det_diet_breadth_n", "trophic_level", "foraging_stratum", "activity_cycle", "freshwater", "marine", "terrestrial_non.volant", "terrestrial_volant", "upper_elevation_m", "lower_elevation_m", "altitude_breadth_m", "island_dwelling", "island_endemicity", "disected_by_mountains", "glaciation", "biogeographical_realm", "habitat_breadth_n", "foraging_aerial", "foraging_arboreal", "foraging_ground", "foraging_marine", "foraging_scansorial", "island_mainland", "island_marine", "island_landbridge", "island_endemic", "bio_palearctic", "bio_afrotropical", "bio_antarctic", "bio_australasian", "bio_indomalayan", "bio_nearctic", "bio_neotropical", "bio_oceanian", "iucn_forest", "iucn_savanna", "iucn_shrubland", "iucn_grassland", "iucn_wetlands", "iucn_rocky", "iucn_caves", "iucn_desert", "iucn_marineneritic", "iucn_marineoceanic", "iucn_marinedeep", "iucn_marineintertidal", "iucn_marinecoastal", "iucn_artificialterr", "iucn_artificialaquatic", "iucn_introducedveg", "iucn_moistforest", "iucn_moistsavanna", "relative_wing_loading", "aspect_ratio", "forearm_mm", "median_aggregation_size", "migration", "mixed_species_association_n", "cave_roost", "cavity_roost", "foliage_roost", "generalist_roost", "min_aridity_index", "mean_aridity_index", "perc80_aridity_index", "pco_1", "pco_2", "pco_3", "pco_4", "pco_5", "pco_6", "pco_7", "pco_8", "pco_9", "pco_10", "pco_11", "pco_12", "pco_13", "pco_14", "pco_15", "pco_16", "pco_17")]
+DATA <- SPECS %>%
+  filter(orig_species %in% BAT[BAT$is_strain_in_exp_dataset == 1, ]$species)
+VALD <- SPECS %>%
+  filter(orig_species %in% BAT[BAT$is_strain_in_exp_dataset == 0, ]$species)
+DATA <- DATA[apply(DATA, 1, function(i) sum(is.na(i))) != 123, ]
+DATA <- DATA[!duplicated(DATA$species), ]
+VALD <- VALD[apply(VALD, 1, function(i) sum(is.na(i))) != 123, ]
+VALD <- VALD[!duplicated(VALD$species), ]
+```
+
+```{r}
+DATA <- read.csv("~/Downloads/Filovirus/npc1training_18Mar2024.csv")
+PRED <- read.csv("~/Downloads/Filovirus/npc1prediction_20Mar2024.csv")
+```
