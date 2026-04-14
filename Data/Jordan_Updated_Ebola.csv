@@ -1,0 +1,98 @@
+Event ID,Spillover ID,Initial Event,Virus,Data type,Nonhuman primate,Other mammal,Human,Country,Year,Human start date,Start date,Location,Source,Date source,Latitude,Longitude,Coordinate source,Cases,Deaths,DOI
+1,0,,,Antibody,,,,Ethiopia,1961,,,,Tignor et al. 1993,,,,,NA,NA,10.1016/0035-9203(93)90471-2
+2,1,T,,Antibody,,,T,DRC,1972,5/15/72,5/15/72,Tandala Hospital,Heymann et al. 1980,Heymann et al. 1980,2.97323,19.350035,Google Maps,NA,NA,10.1093/infdis/142.3.372
+3,2,T,SUDV,Confirmed,,,T,S Sudan,1976,6/27/76,6/27/76,Nzara,WHO 1978,WHO 1978,4.63912,28.25115,Mylne et al. 2014,284,151,https://iris.who.int/handle/10665/261727
+4,3,T,EBOV,Confirmed,,,T,DRC,1976,8/26/76,8/26/76,Yambuku,WHO 1978,WHO 1978,2.82535,22.22567,Mylne et al. 2014,318,280,https://iris.who.int/handle/10665/261727
+5,4,T,EBOV,Confirmed,,,T,DRC,1977,6/15/77,6/15/77,Bonduni,Heymann et al. 1980,Heymann et al. 1980,2.88874,19.22384,Mylne et al. 2014,1,1,10.1093/infdis/142.3.372
+6,5,T,EBOV,Antibody,,,T,DRC,1977,11/15/77,11/15/77,Bowabili,Heymann et al. 1980,Heymann et al. 1980,2.702713,19.350317,Google Maps,NA,NA,10.1093/infdis/142.3.372
+7,6,T,SUDV,Confirmed,,,T,S Sudan,1979,7/31/79,7/31/79,Nzara,Baron et al. 1983,Baron et al. 1983,4.63912,28.25115,Mylne et al. 2014,34,22,
+8,7,T,,Observed,T,,,CD'I,1992,,11/15/92,Tai Forest,Formenty et al. 1999,Formenty et al. 1999,5.86442,-7.31794,Mylne et al. 2014,NA,NA,
+9,8,T,TAFV,Confirmed,T,,T,CD'I,1994,11/24/94,10/25/94,Tai Forest,Formenty et al. 1999,Formenty et al. 1999,5.86442,-7.31794,Mylne et al. 2014,1,0,
+10,9,T,EBOV,Confirmed,T,T,T,Gabon,1994,11/15/94,11/15/94,"Mekouka, Andock",Amblard et al. 1997,Amblard et al. 1997,1.44201,12.92929,Mylne et al. 2014,51,31,
+12,10,T,EBOV,Confirmed,,,T,DRC,1995,1/6/95,1/6/95,Mwembe (Kikwit),,Khan et al. 1999,-5.03334,18.81667,Mylne et al. 2014,315,254,
+14,11,T,EBOV,Confirmed,T,T,T,Gabon,1995,1/31/96,12/15/95,Elir and Mayibooth,"Lahm et al. 2007, Georges et al. 1999","Lahm et al. 2007, Georges et al. 1999",1.27019,13.179447,Google Maps,31,21,10.1016/j.trstmh.2006.07.002
+15,12,,EBOV,Confirmed,T,,T,Gabon,1996,7/13/96,7/13/96,SHM timber concession,Georges et al. 1999,Georges et al. 1999,0.445628,11.873764,Google Maps,60,45,
+16,12,,EBOV,Confirmed,T,,,Gabon,1996,,7/15/96,Lope National Park,Golding unpublished,Golding unpublished,-0.146386,11.574976,Golding unpublished,NA,NA,
+17,13,,EBOV,Local,T,T,,Gabon,1997,,1/15/97,"Mekouka, Masoko, Ete",Lahm et al. 2007,Lahm et al. 2007,1.4,12.983333,Georges et al. 1999,NA,NA,10.1016/j.trstmh.2006.07.002
+18,14,,EBOV,Local,T,T,,Gabon,1997,,2/15/97,SHM timber concession,Lahm et al. 2007,Lahm et al. 2007,0.445628,11.873764,Google Maps,NA,NA,10.1016/j.trstmh.2006.07.002
+19,15,T,EBOV,Local,T,,,Gabon,1997,,5/15/97,Mbokamabaka,Lahm et al. 2007,Lahm et al. 2007,1.4,12.983333,Georges et al. 1999,NA,NA,10.1016/j.trstmh.2006.07.002
+21,16,T,EBOV,Local,T,,,Gabon,1997,,12/15/97,Mekouka,Lahm et al. 2007,Lahm et al. 2007,1.4,12.983333,Georges et al. 1999,NA,NA,10.1016/j.trstmh.2006.07.002
+22,16,T,EBOV,Local,T,T,,Gabon,1997,,12/15/97,Upper Ayina,Lahm et al. 2007,Lahm et al. 2007,2.239623,12.821772,Google Maps,NA,NA,10.1016/j.trstmh.2006.07.002
+24,17,T,EBOV,Local,,T,,Gabon,1998,,5/15/98,Andock,Lahm et al. 2007,Lahm et al. 2007,1.483333333,12.91666667,Georges et al. 1999,NA,NA,10.1016/j.trstmh.2006.07.002
+25,18,T,EBOV,Local,T,,,Gabon,1999,,1/15/99,Minkebe,Lahm et al. 2007,Lahm et al. 2007,1.76667,12.8,Mylne et al. 2014,NA,NA,10.1016/j.trstmh.2006.07.002
+26,19,T,EBOV,Local,,T,,Gabon,2000,,2/15/00,Makouke,Lahm et al. 2007,Lahm et al. 2007,-0.527336,10.280027,Google Maps,NA,NA,10.1016/j.trstmh.2006.07.002
+27,20,T,EBOV,Local,T,T,,Gabon,2000,,8/15/00,GEB 1,Lahm et al. 2007,Lahm et al. 2007,0.01339,11.139396,Google Maps,NA,NA,10.1016/j.trstmh.2006.07.002
+28,20,T,EBOV,Local,T,T,,Gabon,2000,,8/15/00,Rougier 1 and 2,Lahm et al. 2007,Lahm et al. 2007,-0.1411915,12.2969225,Google Maps,NA,NA,10.1016/j.trstmh.2006.07.002
+29,21,T,SUDV,Confirmed,,,T,Uganda,2000,8/30/00,8/30/00,Rwot-Obillo,Okware et al. 2002,Okware et al. 2002,2.94998,32.19997,Mylne et al. 2014,425,224,
+30,22,T,,Local,T,,,Gabon,2001,,8/15/01,"GEB 2, Rougier 3",Lahm et al. 2007,Lahm et al. 2007,0.0175095,11.9155955,Google Maps,NA,NA,
+32,23,T,EBOV,Confirmed,T,T,T,Gabon,2001,10/21/01,8/15/01,east Mekambo region /Mendemba area/Lossi,Lahm et al. 2007,Lahm et al. 2007,0.562475775,14.27075563,Golding unpublished,65,53,
+44,24,T,EBOV,Confirmed,T,T,T,Gabon,2001,11/28/01,8/15/01,east Mekambo region /Mendemba area/Lossi,Lahm et al. 2007,Lahm et al. 2007,0.562475775,14.27075563,Golding unpublished,NA,NA,
+47,25,T,,Local,T,T,,Gabon,2002,12/21/02,10/15/02,Kelle-Mbomo,Lahm et al. 2007,Lahm et al. 2007,-0.11441,14.37567,Mylne et al. 2014,NA,NA,
+49,26,T,EBOV,Confirmed,T,T,T,ROC,2002,12/21/02,12/21/02,Yembelengoye,WHO 2003,WHO 2003,0.13418,14.20981,Mylne et al. 2014,143,128,10.1016/j.micinf.2005.04.006
+50,27,T,EBOV,Confirmed,T,,,ROC,2003,,6/15/03,Mbandza,Roquet et al. 2005,Roquet et al. 2005,0.6987,14.7029,Roquet et al. 2005,NA,NA,
+51,28,T,EBOV,Confirmed,T,,T,ROC,2003,10/11/02,6/15/03,Mbandza,Boumandouki et al. 2005,Boumandouki et al. 2005,0.56015,14.65732,Mylne et al. 2014,35,29,10.1016/j.micinf.2005.04.006
+52,29,T,,Observed,T,,,ROC,2003,,12/15/03,Lokou≈Ω,Caillaud et al. 2006,Caillaud et al. 2006,0.906333333,15.17583333,Caillaud et al. 2006,NA,NA,
+53,30,T,SUDV,Confirmed,T,T,T,DRC,2004,4/15/04,4/15/04,Yambio,WHO 2004,WHO 2004,4.43149,28.7054,Mylne et al. 2014,17,7,
+54,31,T,EBOV,Confirmed,T,,T,ROC,2005,4/18/05,4/18/05,Etoumbi,Nkoghe et al. 2011,Nkoghe et al. 2011,0.494444444,14.67861111,Nkoghe et al. 2011,12,10,
+55,32,T,EBOV,Confirmed,,,T,DRC,2007,6/12/07,6/12/07,Luebo,WHO 2007,Leroy et al. 2004,-5.25956,21.40954,Mylne et al. 2014,264,187,
+56,33,T,BDBV,Confirmed,,,T,Uganda,2007,8/1/07,8/1/07,Bundibugyo,Wamala et al. 2010,Wamala et al. 2010,0.7706,30.13041,Mylne et al. 2014,131,42,
+57,34,T,EBOV,Confirmed,,,T,DRC,2008,11/27/08,11/27/08,Luebo,Grard et al. 2011,Grard et al. 2011,-5.63674,21.37481,Mylne et al. 2014,32,15,
+58,35,T,SUDV,Confirmed,,,T,Uganda,2011,5/1/11,5/1/11,Nakisamata,Shoemaker et al. 2012,Shoemaker et al. 2012,0.62415,32.73669,Mylne et al. 2014,1,1,
+59,36,T,BDBV,Confirmed,,,T,DRC,2012,8/16/12,3/20/12,"Bazanga, Isiro",Epelboin et al. 2012,Epelboin et al. 2012,3.184716,27.869332,Google Maps,38,13,
+61,37,T,SUDV,Confirmed,,,T,Uganda,2012,6/11/12,6/11/12,"Nyamarunda, Kibaale",WHO 2012,WHO 2012,0.86599,30.92654,Mylne et al. 2014,11,4,
+62,38,T,SUDV,Confirmed,,,T,Uganda,2012,11/13/12,11/13/12,Luwero,Albarino et al. 2013,Albarino et al. 2013,0.83175,32.58253,Mylne et al. 2014,6,3,
+63,39,T,EBOV,Confirmed,,,T,Guinea,2013,12/2/13,12/2/13,Meliandou,Baize et al. 2014,Baize et al. 2014,8.6225,-10.06423,Golding unpublished,28610,11308,
+64,40,T,EBOV,Confirmed,T,,T,DRC,2014,7/26/14,7/26/14,Inkanamongo,Maganga et al. 2014,Maganga et al. 2014,-0.7138719,20.5302443,Openstreetmap,69,49,
+,41,T,EBOV,Confirmed,,,T,DRC,2017,5/11/17,5/11/17,"Likati Health Zone, Bas Uele Province",CDC 2021,CDC 2021,3.363144973,23.88852594,Google Maps,8,4,
+,42,T,EBOV,Confirmed,,,T,DRC,2018,5/8/18,5/8/18,"Bikoro, Equateur Province",CDC 2021,CDC 2021,-0.731815492,18.14027306,Google Maps,54,33,
+,43,T,EBOV,Confirmed,,,T,DRC,2018,8/8/18,8/8/18,North Kivu Province/South Kivo Province/Ituri,CDC 2021,CDC 2021,-0.616100757,28.40816182,Google Maps,3470,2287,
+,44,T,EBOV,Confirmed,,,T,DRC,2020,,6/1/20,"Mbandaka, Equateur",CDC 2021,CDC 2021,0.025894687,18.29784905,Google Maps,130,55,
+,39,,EBOV,Confirmed,,,T,Guinea,2021,,2/14/21,N‚ÄôZ√©r√©kor√© Prefecture,CDC 2021,CDC 2021,7.756234483,-8.816958138,Google Maps,23,12,
+,43,,EBOV,Confirmed,,,T,DRC,2021,,2/7/21,"Biena Health Zone, North Kivu Province",CDC 2021,CDC 2021,0.500214663,29.45194174,Google Maps,12,6,
+,44,,EBOV,Confirmed,,,T,DRC,2021,,10/8/21,"Beni Health Zone, North Kivu Province",CDC 2021,CDC 2021,0.5047992,29.49801,RDC polygons,11,9,
+,,,SUDV,Confirmed,,,T,Uganda,2022,,9/20/22,"Ngabano Village, Madudu, Mubende District",Branda et al. 2023,Branda et al. 2023,0.6844,31.4807,Google Maps,164,55,
+,,,EBOV,Confirmed,,,T,DRC,2022,,4/23/22,"Mbandaka, Equateur",CDC 2025,CDC 2025,0.025894687,18.29784905,Google Maps,5,5,
+,,,EBOV,Confirmed,,,T,DRC,2022,,8/22/22,"Beni Health Zone, North Kivu Province",CDC 2025,CDC 2025,0.5047992,29.49801,RDC polygons,1,1,
+,,,SUDV,Confirmed,,,T,Uganda,2025,,1/30/25,Kampala,CDC 2025,CDC 2025,0.3152,32.5816,Google Maps,14,4,
+,,,MARV,Confirmed,,,T,Kenya,1980,,,"Kitum cave, Mount Elgon National Park",CDC 2025,CDC 2025,1.0455,34.75386,FMNH 215667,2,1,
+,,,RAVN,Confirmed,,,T,Kenya,1987,,,"Kitum cave, Mount Elgon National Park",CDC 2025,CDC 2025,1.0455,34.75386,FMNH 215667,1,1,
+,,,MARV,Confirmed,,,T,DRC,1998,,Oct-98,"Durba, Watsa Zone",Bausch et al. 2006,Bausch et al. 2006,3.1022,29.5842,Google Maps,154,128,
+,,,MARV,Confirmed,,,T,Angola,2004,,4-Oct,Uige Province,CDC 2025,CDC 2025,-7.61,15.06,Google Maps,252,227,
+,,,MARV,Confirmed,,,T,Uganda,2007,,,Kitaka mine,Adjemian et al. 2011,Adjemian et al. 2011,-0.1302,30.3093,FMNH 212446 locality,4,1,10.1093/infdis/jir312
+,,,MARV,Confirmed,,,T,Uganda,2008,,7-Dec,"Python Cave, Maramagambo Forest",CDC 2025,CDC 2025,-0.308966,29.979447,https://www.showcaves.com/english/other/showcaves/Maramagambo.html,1,1,
+,,,MARV,Confirmed,,,T,Uganda,2008,,8-Jul,"Python Cave, Maramagambo Forest",CDC 2025,CDC 2025,-0.308966,29.979447,https://www.showcaves.com/english/other/showcaves/Maramagambo.html,1,0,
+,,,MARV,Confirmed,,,T,Uganda,2012,,9/3/12,"Kabale, Ibanda, Mbarara, and Kampala",Mbonye et al. 2012,Mbonye et al. 2012,-1.3505,30.0203,Google Maps,15,4,10.4314/ahs.v12i4.31
+,,,MARV,Confirmed,,,T,Uganda,2014,,,Kampala,Nyakarahuka et al. 2017,Nyakarahuka et al. 2017,0.2254,32.3223,Google Maps (Mpigi Health Center IV where patient worked),1,1,10.3201/eid2306.170047
+,,,MARV,Confirmed,,,T,Uganda,2017,,,"Kayamoyo Village, Kween District",Nyakarahuka et al. 2019,Nyakarahuka et al. 2019,1.459,34.621,Google Maps,4,3,10.1371/journal.pntd.0007257
+,,,MARV,Confirmed,,,T,Guinea,2021,,,"Temessadou M’bokét, Guéckédou",Makanov et al. 2023,Makanov et al. 2023,8.53483,-10.2296,Google Maps,1,1,10.1371/journal.pntd.0011279
+,,,MARV,Confirmed,,,T,Ghana,2022,,7/22/22,"Bekwai and Adansi North, Ashanti Region",Sah et al. 2022,Sah et al. 2022,6.391121,-1.58302,GADM polygons,3,2,10.1080/01652176.2022.2116501
+,,,MARV,Confirmed,,,T,Equatorial Guinea,2023,,,"Nsok Nsomo, Kie-Ntem, Littoral, Centro Sur",Ngai et al. 2025,Ngai et al. 2025,1.9297,11.0341,Google Maps,16,12,10.3201/eid3105.241749
+,,,MARV,Confirmed,,,T,Tanzania,2023,,,Goziba Island,Sibomana and Kubwimana 2023,Sibomana and Kubwimana 2023,-1.469722,32.611944,Google Maps,9,6,10.1002/iid3.980
+,,,MARV,Confirmed,,,T,Rwanda,2024,,9/27/24,"Tunnel 12, Gamico Mining, Kigali",CDC 2025,CDC 2025,-1.9731,30.0278,"Google Maps (from Guardian article ""Beware of the Bat"")",66,15,10.1056/NEJMoa2415816
+,,,LLOV,Local,,T,,Hungary,2019,,,Mine cavern near Mád,Kemenesi et al. 2022,Kemenesi et al. 2018,48.1922,21.276,Google Maps,NA,NA,10.1038/s41426-018-0067-4
+,,,DEHV,Local,,T,,China,2016,,16-Dec,Dehong,He et al. 2024,He et al. 2024,24.4323,98.5849,Google Maps,NA,NA,10.1073/pnas.2313789121
+,,,MARV,Local,,T,,Gabon,2009,,,Zadié Cave,Maganga et al. 2011,Maganga et al. 2011,0.98,13.19,Maganga et al. 2011,NA,NA,10.1093/infdis/jir358
+,,,MARV,Local,,T,,Guinea,2022,,,Legon Tyo cave,Makanov et al. 2023,Makanov et al. 2023,8.61706,-10.36345,Makanov et al. 2023,NA,NA,10.1371/journal.pntd.0011279
+,,,MARV,Local,,T,,Zambia,2018,,18-Sep,"Chongwe, Lusaka",Kajihara et al. 2019,Kajihara et al. 2019,-15.3328,28.679,Google Maps,NA,NA,10.3201/eid2508.190268
+,,,MARV,Local,,T,,South Africa,2017,,17-Apr,"Matlapitsi Cave, Limpopo Province",Paw_ska et al. 2020,Paw_ska et al. 2020,-24.114737,30.121402,Geldenhuys et al. 2023 (10.1038/s41598-023-42938-w),NA,NA,10.3201/eid2612.202108
+,,,LLOV,Local,,T,,Spain,2002,,,"Cueva del Lloviu, Asturias",Negredo et al. 2011,Negredo et al. 2011,43.501556,-5.535583,Negredo et al. 2011,NA,NA,10.1371/journal.ppat.1002304
+,,,MLAV,Local,,T,,China,2015,,15-Dec,M_nglà County,Yang et al. 2019,Yang et al. 2019,22.437778,100.686111,Yang et al. 2019,NA,NA,10.1038/s41564-018-0328-y
+,,,BOMV,Local,,T,,Sierra Leone,2016,,,Bombali District,Goldstein et al. 2018,Goldstein et al. 2018,9.2476,-12.1633,Google Maps,NA,NA,10.1038/s41564-018-0227-2
+,,,BOMV,Local,,T,,Kenya,2019,,,Busia County,Kareinen et al. 2020,Kareinen et al. 2020,0.4347,34.2422,Google Maps,NA,NA,10.3201/eid2612.202925
+,,,BOMV,Local,,T,,Kenya,2019,,,Taita Hills,Kareinen et al. 2020,Kareinen et al. 2020,-3.3831,38.3625,Google Maps,NA,NA,10.3201/eid2612.202925
+,,,BOMV,Local,,T,,Guinea,2018,,,Yalenzou village,Karan et al. 2019,Karan et al. 2019,7.7116,-8.6917,Google Maps,NA,NA,10.3201/eid2509.190581
+,,,BOMV,Local,,T,,Guinea,2019,,,N’Zerekore city,Karan et al. 2019,Karan et al. 2019,7.7478,-8.8253,Google Maps,NA,NA,10.3201/eid2509.190581
+,,,LLOV,Local,,T,,Bosnia and Herzegovina,2022,,,Zvornik (abandoned limestone mine),Goletic et al. 2023,Goletic et al. 2023,44.3865,19.1048,Google Maps,NA,NA,10.3390/microorganisms11122892
+,,,LLOV,Local,,T,,Italy,2021,,,Roosts sampled unknown but past sampling was done in Arrezo,Tóth et al. 2023,Tóth et al. 2023,43.4633,11.8796,Google Maps,NA,NA,10.1038/s41598-023-38364-7
+,,,BOMV,Local,,T,,Mozambique,2015,,,Inhassoro District,Lebarnechon et al. 2022,Lebarnechon et al. 2022,-21.5394,35.1872,Google Maps,NA,NA,10.3201/eid2812.220853
+,,,MARV,Confirmed,,,,Zimbabwe,1975,,Feb-75,Chinhoyi Caves,Conrad et al. 1978,Conrad et al. 1978,-17.3564,30.13,Google Maps,3,1,10.4269/ajtmh.1978.27.1210
+,,,LLOV,Local,,T,,Spain,2002,,,"Cantabria (looks like Cueva el Soplao, but at least is in that area)",Negredo et al. 2011,Negredo et al. 2011,43.296389,-4.41,Google Maps,NA,NA,10.1371/journal.ppat.1002304
+,,,MARV,Local,,T,,Sierra Leone,2018,,18-Sep,"Kasewe Cave, Moyamba",Amman et al. 2020,Amman et al. 2020,8.324111,-12.176667,Amman et al. 2020,NA,NA,10.1038/s41467-020-14327-8
+,,,MARV,Local,,T,,Gabon,2005,,,Moyen-Ogooué near Lambarene,Towner et al. 2007,Towner et al. 2007,-0.683333,11.016667,Pourrut et al. 2009,NA,NA,10.1371/journal.pone.0000764
+,,,MARV,Local,,T,,Gabon,2005,,,Nyanga near Tchibanga,Towner et al. 2007,Towner et al. 2007,-2.85,11.016667,Pourrut et al. 2009,NA,NA,10.1371/journal.pone.0000764
+,,,MARV,Confirmed,,,T,Tanzania,2025,,10-Jan-25,Ruziba and Katelera Villages,Venkatesan 2025,Venkatesan 2025,-2.403,31.232,CDC 2025 (centroid of Ruziba village polygon),10,10,10.1016/j.lanmic.2025.101121
+,,,EBOV,Confirmed,,,T,DRC,2025,20-Aug-25,20-Aug-25,Bulape Health Zone,Milambo 2025,Milambo 2025,-4.354421,21.74751,Milambo 2025 (centroid of health zone),64,45,10.21203/rs.3.rs-7543616/v1
+,,,BOMV,Local,,T,,Tanzania,2017,,5/1/17,Kyela,Düx et al. 2024,Düx et al. 2024,-9.5949,33.869,Google Maps,NA,NA,10.3390/v16081227
+,,,MARV,Confirmed,,,T,Ethiopia,2025,14-Nov-25,14-Nov-25,Jinka,Africa CDC 2025,Africa CDC 2025,5.78619,36.56564,Africa CDC 2025 (Used coordinates from the 2022 populated areas shapefile on Humanitarian Data Exchange),14,9,
+,,,LLOV,Local,,T,,China,2015,,,"Yulin, Guangxi",Yan et al. 2025,Yan et al. 2025,22.65,110.18,Google Maps,NA,NA,10.1038/s41564-024-01884-7
+,,,DEHV,Local,,T,,China,2016,,,"Dehong, Yunnan ",Yan et al. 2025,Yan et al. 2025,24.4323,98.5849,Google Maps,NA,NA,10.1038/s41564-024-01884-7
