@@ -7,8 +7,10 @@ Contained in this folder are most data products required to run the FilovirusRes
 - Jordan_Updated_Ebola.csv: A record of filovirus outbreaks and detections (no serological evidence included) for all described mammalian filoviruses.
 - mammphylodata_21Jan2025.csv: Training dataset used for all analyses with variables removed due to missing values and skewed variables log transformed. Allows for quicker use.
 - MamPhy_fullPosterior_BDvr_Completed_5911sp_topoCons_FBDasZhouEtAl_MCC_v2_target.tre: Tree from Upham et al. 2019 that is used to grab family information and act as a backbone for any plotting of phylogenetic information.
-- npc1prediction_20Mar2024.csv: Prediction dataset used that includes most species of bats with trait information.
-- npc1training_18Mar2024.csv: Training dataset that includes trait variables for species used in the training of our models.
+- npc1prediction_20Mar2024.csv: Prediction dataset used that includes most species of bats with trait information. This is used with FilovirusResultsMammals.Rmd and is functionally the same as the dataset below.
+- npc1prediction_27Mar2026.csv: This is the prediction dataset that is cleaner in terms of column positions and is used with NPC1MammalPhyloIterations.Rmd. This is my attempt at making it easier to run this code and see what these data are.
+- npc1training_18Mar2024.csv: Training dataset that includes trait variables for species used in the training of our models. This is used with FilovirusResultsMammals.Rmd and is functionally the same as the dataset below. 
+- npc1training_27Mar2026.csv: This is the training dataset that is cleaner in terms of column positions and is used with NPC1MammalPhyloIterations.Rmd. This is my attempt at making it easier to run this code and see what these data are.
 - PredictedBatsHan2016.csv: Predictions from Han et al. 2016 used for easy comparison with results from this paper. The results were available in a PDF format, so this makes them easier to use.
 - shap_geometric_mean.csv: The geometric mean of SHAP values at ~100 km resolution across the globe as mapped to bat distributions. Mammal distribution data is from Marsh et al. 2022.
 - waterbodies.shp: Large waterbody data to help clean up the plots a bit :)
