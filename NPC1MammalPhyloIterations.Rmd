@@ -12,15 +12,15 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r packages}
 packages <- c("tidyverse", "magrittr", "sf", "terra", "xgboost", "caret", "readxl", "foreach", "SHAPforxgboost", "caret", "tidymodels", "ape", "phylotools", "patchwork")
 sapply(packages, library, character.only = T)
-setwd("~/Downloads/Filovirus/")
+setwd("~/Desktop/Filovirus/")
 ```
 
 In this script, we find the general pipeline to run one of our XGBoost models of binding strength to a particular filovirus. Filoviruses can be changed out by find and replacing the label of them (e.g., from sudv to ebov or bomv, note that RAVV is listed as ravn here).
 
 For the first part, we are going to read in our datasets compiling functional trait, phylogenetic, and habitat information. We have a distinct training dataset and our validation dataset will be subset from our prediction dataset. As with our data collation script, we use `case_when` to allow the viewer to see any taxonomic changes easily. We also apply a home range imputation based on methods from [Upham et al. 2023](https://doi.org/10.1101/504803). 
 ```{r readindata}
-DATA <- read.csv("~/Downloads/Filovirus/npc1training_29Jul2025.csv")
-VALD <- read.csv("~/Downloads/Filovirus/npc1prediction_29Jul2025.csv")
+DATA <- read.csv("npc1training_27Mar2026.csv")
+VALD <- read.csv("npc1prediction_27Mar2026.csv")
 OBSV <- read.csv("bats_obs_pred.csv")
 #MISM$species[which(is.na(match(MISM$species, ATRE$tip.label)))] 
 OBSV %<>%
@@ -58,27 +58,17 @@ OBSV %<>%
   filter(!is.na(species))
 VALD <- VALD[VALD$binomial %in% setdiff(OBSV$species, DATA$species), ]
 VALN <- VALD$binomial
-DATA %<>%
-   mutate(home_range_km2 = case_when(herbivore == 1 ~ 2.34 + 1.08 * log10(adult_mass_g),
-                                    carnivore == 1 ~ 29.51 + 1.35 * log10(adult_mass_g),
-                                    omnivore == 1 ~ 12.02 + 1.14 * log10(adult_mass_g)))
-VALD %<>%
-   mutate(home_range_km2 = case_when(herbivore == 1 ~ 2.34 + 1.08 * log10(adult_mass_g),
-                                    carnivore == 1 ~ 29.51 + 1.35 * log10(adult_mass_g),
-                                    omnivore == 1 ~ 12.02 + 1.14 * log10(adult_mass_g)))
 ```
 
 This leaves us with our training dataset (`DATA`) and our separate validation dataset (`VALD`). For each, we will log transform heavily skewed variables, turn categorical variables into factors (more important for other algorithms, but retained here), and remove variables with near zero variation. 
 ```{r skewness}
-SKEW <- sapply(c(16:138, 140:150), function(x) moments::skewness(na.omit(DATA[, x]))) #use moments package to determine skewness
+SKEW <- sapply(c(17:134), function(x) moments::skewness(na.omit(DATA[, x]))) #use moments package to determine skewness
 SKEW
 
 #wrap_plots(PLT[which(SKEW > 1.5)]) #only plot those with a skewness above 2
 #Seems to be mostly temperature standard deviations and precipitation anomalies (along with percent crops)
-CLSK <- colnames(DATA)[c(16:138, 140:150)][which(abs(SKEW) > 1.5)] #add heavily skewed variables to a list
-#CLSK <- CLSK[c(1:19, 29, 32)]
-#CLSK <- CLSK[c(1:8, 17, 34:35, 40:41)]
-CLSK <- CLSK[c(1:8, 17, 34:35, 39:43)]
+CLSK <- colnames(DATA)[c(17:134)][which(abs(SKEW) > 1.5)] #add heavily skewed variables to a list
+CLSK <- CLSK[c(1:10, 19, 36:37)]
 
 
 for(i in CLSK) {
@@ -102,25 +92,25 @@ for(i in CLSK) {
 colnames(DATA)[colnames(DATA) %in% CLSK] <- paste("log", colnames(DATA)[colnames(DATA) %in% CLSK], sep = "_")
 colnames(VALD)[colnames(VALD) %in% CLSK] <- paste("log", colnames(VALD)[colnames(VALD) %in% CLSK], sep = "_")
 
-VARS <- colnames(DATA)[c(16:138, 140:150)]
+VARS <- colnames(DATA)[c(17:134)]
 DATA <- as.data.frame(DATA)
 ```
 
 ```{r categorical}
-for(i in colnames(DATA)[c(36:37, 54:59, 63:65, 67:99, 104, 106:111, 134:136, 145)]) {
+for(i in colnames(DATA)[c(40:41, 58:63, 67:69, 71:103, 110, 112:117)]) {
   DATA[, i] <- as.factor(as.character(DATA[, i]))
 }
-for(i in colnames(DATA)[c(36:37, 54:59, 63:65, 67:99, 104, 106:111, 134:136, 145)]) {
+for(i in colnames(DATA)[c(40:41, 58:63, 67:69, 71:103, 110, 112:117)]) {
   VALD[, i] <- as.factor(as.character(VALD[, i]))
 }
 ```
 
 We will also remove all variables with a large amount of missing data, double check that we retained species names and family names for our records, and then create usable objects for XGBoost with the label and variables.
 ```{r nearzero}
-NZV <- colnames(DATA)[c(16:138, 140:150)][caret::nearZeroVar(DATA[, c(16:138, 140:150)])] #just checking for variables with near zero variation
+NZV <- colnames(DATA)[c(17:134)][caret::nearZeroVar(DATA[, c(17:134)])] #just checking for variables with near zero variation
 VARS <- VARS[!VARS %in% NZV]
 VARS <- c(VARS[-which(apply(DATA[, VARS], 2, function(i) sum(is.na(i))) > 48)])
-DATA[48, ]
+DATA <- DATA[-48, ]
 SPECS <- c(DATA$species, VALD$binomial)
 FAMS <- c(DATA$family, VALD$family)
 FAMS[4] <- "Phyllostomidae"
@@ -193,7 +183,7 @@ PARS %>%
          !is.na(mae),
          !is.na(huber_loss)) %>%
   arrange(desc(rsq), rmse)
-write.csv(PARS, "sudv_mammphylo_15Aug2025.csv", row.names = F)
+#write.csv(PARS, "a.csv", row.names = F)
 PARS <- cbind.data.frame(mtry = 0.355, #914
                          min_n = 10, #12
                          tree_depth = 12, #11
@@ -234,7 +224,7 @@ SIMP <- foreach(i = 1:100, .combine = "rbind") %do% {
                              new_data = TRN,
                              composition = "matrix"))$mean_shap_score
 }
-write.csv(SIMP, "sudv_mammphylo_30Jul2025_simp.csv", row.names = F)
+#write.csv(SIMP, "a.csv", row.names = F)
 
 SHAP <- foreach(i = 1:100, .combine = "rbind") %do% {
   xgb_fit <- OBJS[[i]][[2]] %>%
@@ -250,7 +240,7 @@ SHAP <- foreach(i = 1:100, .combine = "rbind") %do% {
     mutate(iteration = i,
            row_index = OBJS[[i]][[1]]$in_id[.$ID])
 }
-write.csv(SHAP, "sudv_mammphylo_30Jul2025_shap.csv", row.names = F)
+#write.csv(SHAP, "a.csv", row.names = F)
 ```
 
 Using the full training dataset, we train an XGBoost model using the chosen parameters that gave the best performance and used the held out validation dataset to calculate a variety of performance metrics.
@@ -269,5 +259,4 @@ MOD <- xgboost(data = as.matrix(DATA[, -1]),
 PVAL <- cbind.data.frame(OBSV[OBSV$species %in% VALN, c("species", "ebov_auc")]) %>%
   left_join(cbind.data.frame(species = VALN, pred_auc = predict(MOD, VALD)), by = "species")
 ModelMetrics::rmse(PVAL$ebov_auc, PVAL$pred_auc)
-ModelMetrics::rmse(PVAL$ebov_auc[c(-12, -15, -17, -37, -46)], PVAL$pred_auc[c(-12, -15, -17, -37, -46)])
 ```
